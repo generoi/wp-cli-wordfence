@@ -16,8 +16,7 @@ class Record
         public array $references,
         public string $published,
         public array $copyrights,
-    )
-    {
+    ) {
     }
 
     /**
@@ -51,5 +50,15 @@ class Record
     public function getMessage(): string
     {
         return $this->title;
+    }
+
+    public function isPatched(): bool
+    {
+        foreach ($this->software as $software) {
+            if ($software->patched) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -2,6 +2,7 @@
 
 namespace GeneroWP\WpCliWordfence;
 
+use GeneroWP\WpCliWordfence\Cli\Scanner;
 use WP_CLI;
 
 class Plugin
@@ -20,7 +21,7 @@ class Plugin
     {
         if (class_exists(Wp_Cli::class)) {
             /* @phpstan-ignore-next-line */
-            WP_CLI::add_command('wordfence', VulnerabilityScanner::class);
+            WP_CLI::add_command('wordfence', Scanner::class);
         }
     }
 }

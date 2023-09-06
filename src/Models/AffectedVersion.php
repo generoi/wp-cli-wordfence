@@ -9,8 +9,7 @@ class AffectedVersion
         public bool $fromInclusive,
         public string $toVersion,
         public bool $toInclusive,
-    )
-    {
+    ) {
     }
 
     /**
