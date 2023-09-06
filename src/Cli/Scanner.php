@@ -59,12 +59,15 @@ class Scanner
         $copyrights = [];
 
         try {
+            $hasFixableErrors = false;
             foreach ($scanner->next() as $vulnerability => $exception) {
                 foreach ($vulnerability->copyrights as $copyright) {
                     $copyrights[$copyright->slug] = $copyright;
                 }
 
                 if ($vulnerability->isPatched()) {
+                    $hasFixableErrors = true;
+
                     $this->reportError($exception->getMessage(), $vulnerability);
                 } else {
                     $this->reportWarning('Unpatched vulnarability', $vulnerability);
@@ -79,6 +82,10 @@ class Scanner
             }
 
             set_transient(self::TRANSIENT_LAST_SCAN_TIME, time());
+
+            if ($hasFixableErrors) {
+                exit(1);
+            }
         } catch (Exception $e) {
             WP_CLI::error(WP_CLI::error_to_string($e));
         }
