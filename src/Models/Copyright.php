@@ -9,8 +9,7 @@ class Copyright
         public string $notice,
         public string $license,
         public string $licenseUrl,
-    )
-    {
+    ) {
     }
 
     /**

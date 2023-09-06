@@ -15,8 +15,7 @@ class Software
         public array $affectedVersions,
         public bool $patched,
         public array $patchedVersions,
-    )
-    {
+    ) {
     }
 
     /**

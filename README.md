@@ -20,4 +20,6 @@ Install dependencies
 
 Run the tests
 
-    composer test
+    npm -g i @wordpress/env
+    wp-env start
+    wp-env run tests-cli --env-cwd=wp-content/plugins/wp-cli-wordfence ./vendor/bin/phpunit
