@@ -1,6 +1,6 @@
-# wp-plugin-boilerplate
+# wp-cli-wordfence
 
-> A boilerplate WordPress plugin
+> A Wordfence plugin scanner for WP CLI
 
 ## Requirements
 
@@ -42,5 +42,5 @@ Build assets
 
 ## Translations
 
-    wp i18n make-pot . languages/wp-plugin-boilerplate.pot
+    wp i18n make-pot . languages/wp-cli-wordfence.pot
     wp i18n make-mo languages/
