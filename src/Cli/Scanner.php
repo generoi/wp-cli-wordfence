@@ -20,7 +20,7 @@ class Scanner
 
     protected bool $isForce = false;
     protected bool $isVerbose = false;
-    protected bool $isSilent = false;
+    protected bool $onlyErrors = false;
 
     /**
      * Scan active plugins for vulnerabilities
@@ -34,7 +34,7 @@ class Scanner
      * [--format=<format>]
      * : Format to use: ‘table’, ‘json’, ‘csv’, ‘yaml’, ‘ids’, ‘count’ (default: `table`)
      *
-     * [--silent]
+     * [--only-errors]
      * : Only output errors
      *
      * [--force]
@@ -50,7 +50,7 @@ class Scanner
     {
         $this->isForce = (bool) get_flag_value($flags, 'force', false);
         $this->isVerbose = (bool) get_flag_value($flags, 'verbose', false);
-        $this->isSilent = (bool) get_flag_value($flags, 'silent', false);
+        $this->onlyErrors = (bool) get_flag_value($flags, 'only-errors', false);
 
         $format = get_flag_value($flags, 'format', 'table');
         $email = get_flag_value($flags, 'email');
@@ -84,7 +84,7 @@ class Scanner
                 $isPatched = $vulnerability->isPatched();
                 if ($isPatched) {
                     $hasFixableErrors = true;
-                } elseif ($this->isSilent) {
+                } elseif ($this->onlyErrors) {
                     continue;
                 }
 
@@ -100,7 +100,7 @@ class Scanner
                 format_items($format, $errors, array_keys($errors[0]));
             }
 
-            if ($copyrights && ! $this->isSilent) {
+            if ($copyrights && ! $this->onlyErrors) {
                 WP_CLI::log('');
                 foreach ($copyrights as $copyright) {
                     WP_CLI::log(WP_CLI::colorize('%y' . $copyright->getNotice() . '%n'));
@@ -109,7 +109,7 @@ class Scanner
 
             set_transient(self::TRANSIENT_LAST_SCAN_TIME, time());
 
-            if ($email) {
+            if ($email && $hasFixableErrors) {
                 wp_mail(
                     $email,
                     sprintf('%s - Vulnerabilities found', get_bloginfo('name')),
@@ -166,7 +166,7 @@ class Scanner
      */
     protected function verbose(string $message, ...$args): void
     {
-        if ($this->isVerbose && ! $this->isSilent) {
+        if ($this->isVerbose && ! $this->onlyErrors) {
             WP_CLI::log(sprintf($message, ...$args));
         }
     }
