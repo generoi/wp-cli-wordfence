@@ -1,6 +1,7 @@
 <?php
 
-use GeneroWP\WpCliWordfence\Models\AffectedVersion;
+use GeneroWP\WpCliWordfence\Models\Record;
+use GeneroWP\WpCliWordfence\VulnerabilityException;
 use GeneroWP\WpCliWordfence\VulnerabilityScanner;
 use GeneroWP\WpCliWordfence\WordfenceApi;
 use PHPUnit\Framework\TestCase;
@@ -16,38 +17,29 @@ class ScannerTest extends TestCase
         $this->scanner = new VulnerabilityScanner(
             new WordfenceApi()
         );
+
+        wp_cache_set('plugins', [
+            '' => [
+                'opening-hours/opening-hours.php' => [
+                    'Version' => '1.3',
+                ],
+            ]
+        ], 'plugins');
     }
 
-    public function testVersion()
+    public function testFixedVersion()
     {
-        $affectedVersion = new AffectedVersion(
-            '2.0.0',
-            true,
-            '2.0.1',
-            true
-        );
+        $record = $vulnerability = null;
+        foreach ($this->scanner->next() as $record => $vulnerability) {
+            if ($record->id === '0004db27-9ea6-4387-ab1d-b95558784ed9') {
+                break;
+            }
+        }
 
-        $this->assertFalse($this->scanner->isAffectedVersion('1.0', $affectedVersion), 'Versions older than start are not affected');
-        $this->assertTrue($this->scanner->isAffectedVersion('2.0.0', $affectedVersion), 'Versions equal to start are affected');
-        $this->assertTrue($this->scanner->isAffectedVersion('2.0.1', $affectedVersion), 'Versions equal to end are affected');
-        $this->assertFalse($this->scanner->isAffectedVersion('2.0.2', $affectedVersion), 'Versions after end are not affected');
-    }
+        $this->assertInstanceOf(Record::class, $record);
+        $this->assertJsonStringEqualsJsonFile(__DIR__ . '/fixtures/opening-hours-vulnerability.json', json_encode($record));
 
-    public function testStarVersion()
-    {
-        $scanner = new VulnerabilityScanner(
-            new WordfenceApi([], __DIR__ . '/fixtures/vulnerabilities.scanner.json')
-        );
-
-        $affectedVersion = new AffectedVersion(
-            '*',
-            true,
-            '2.0.1',
-            true
-        );
-
-        $this->assertTrue($this->scanner->isAffectedVersion('1.0', $affectedVersion), 'Versions newer than start are affected');
-        $this->assertTrue($this->scanner->isAffectedVersion('2.0.1', $affectedVersion), 'Versions equal to end are affected');
-        $this->assertFalse($this->scanner->isAffectedVersion('2.0.2', $affectedVersion), 'Versions after are not affected');
+        $this->assertInstanceOf(VulnerabilityException::class, $vulnerability);
+        $this->assertEquals('* < 1.3 < 1.37', $vulnerability->getMessage());
     }
 }
