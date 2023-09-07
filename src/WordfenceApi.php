@@ -16,14 +16,11 @@ class WordfenceApi
 
     /**
      * @param array<string,mixed> $headers
-     * @param string $endpoint URL to scanner or path to data
      */
     public function __construct(
-        public array $headers = [],
-        string $endpoint = ''
+        protected array $headers = [],
     ) {
-        //$this->endpoint = __DIR__ . '/../tests/fixtures/vulnerabilities.scanner.json';
-        $this->endpoint = $endpoint ?: self::WORDFENCE_SCANNER_ENDPOINT;
+        $this->endpoint = self::WORDFENCE_SCANNER_ENDPOINT;
     }
 
     /**
@@ -31,10 +28,7 @@ class WordfenceApi
      */
     public function getKnownVulnerabilities(): Generator
     {
-        $result = match (true) {
-            is_file($this->endpoint) => json_decode(file_get_contents($this->endpoint), true),
-            default => $this->getResponse(),
-        };
+        $result = $this->getResponse();
         if (is_null($result)) {
             return;
         }

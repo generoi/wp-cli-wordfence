@@ -7,6 +7,7 @@
     "WP_TESTS_DOMAIN": "localhost",
     "WP_TESTS_EMAIL": "oskar@genero.fi",
     "WP_TESTS_TITLE": "WP CLI Wordfence",
-    "WP_PHP_BINARY": "php"
+    "WP_PHP_BINARY": "php",
+    "WP_MEMORY_LIMIT": "256M"
   }
 }
