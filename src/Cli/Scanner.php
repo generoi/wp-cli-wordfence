@@ -28,6 +28,9 @@ class Scanner
      * [<Plugin>...]
      * : One or more plugin slugs to check
      *
+     * [--email=<email>]
+     * : Send vulnerability report to email
+     *
      * [--format=<format>]
      * : Format to use: ‘table’, ‘json’, ‘csv’, ‘yaml’, ‘ids’, ‘count’ (default: `table`)
      *
@@ -50,6 +53,7 @@ class Scanner
         $this->isSilent = (bool) get_flag_value($flags, 'silent', false);
 
         $format = get_flag_value($flags, 'format', 'table');
+        $email = get_flag_value($flags, 'email');
 
         $headers = [];
         $lastTimeRun = (int) get_transient(self::TRANSIENT_LAST_SCAN_TIME);
@@ -105,12 +109,56 @@ class Scanner
 
             set_transient(self::TRANSIENT_LAST_SCAN_TIME, time());
 
+            if ($email) {
+                wp_mail(
+                    $email,
+                    sprintf('%s - Vulnerabilities found', get_bloginfo('name')),
+                    $this->buildEmailMessage($errors, $copyrights),
+                    ['Content-Type: text/html; charset=UTF-8'],
+                );
+            }
+
             if ($hasFixableErrors) {
                 exit(1);
             }
         } catch (Exception $e) {
             WP_CLI::error(WP_CLI::error_to_string($e));
         }
+    }
+
+    /**
+     * @param array<string,string>[] $errors
+     * @param Copyright[] $copyrights
+     */
+    protected function buildEmailMessage(array $errors, array $copyrights): string
+    {
+        $head = sprintf('<th>%s</th>', implode('</th><th>', array_keys($errors[0])));
+        $body = array_reduce($errors, function (string $carry, array $error) {
+            return $carry . sprintf('<tr><td>%s</td></tr>', implode('</td><td>', array_values($error)));
+        }, '');
+
+        $errorsTable = sprintf('
+            <table>
+                <thead>
+                    <tr>%s</tr>
+                </thead>
+                <tbody>
+                    %s
+                </tbody>
+            </table>
+        ', $head, $body);
+
+        $copyrightsRows = array_reduce($copyrights, function (string $carry, Copyright $copyright) {
+            return $carry . sprintf(
+                '<li><strong><a href="%s">%s</a></strong><br />%s</li>',
+                $copyright->licenseUrl,
+                $copyright->notice,
+                $copyright->license,
+            );
+        }, '');
+        $copyrightsList = $copyrightsRows ? sprintf('<ul>%s</ul>', $copyrightsRows) : '';
+
+        return sprintf('%s%s', $errorsTable, $copyrightsList);
     }
 
     /**
