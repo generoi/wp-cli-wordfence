@@ -3,12 +3,12 @@
 namespace GeneroWP\WpCliWordfence\Cli;
 
 use Exception;
-use GeneroWP\WpCliWordfence\Models\Record;
 use GeneroWP\WpCliWordfence\Models\Copyright;
 use GeneroWP\WpCliWordfence\VulnerabilityScanner;
 use GeneroWP\WpCliWordfence\WordfenceApi;
 use WP_CLI;
 
+use function WP_CLI\Utils\format_items;
 use function WP_CLI\Utils\get_flag_value;
 
 /**
@@ -20,12 +20,19 @@ class Scanner
 
     protected bool $isForce = false;
     protected bool $isVerbose = false;
+    protected bool $isSilent = false;
 
     /**
      * Scan active plugins for vulnerabilities
      *
      * [<Plugin>...]
      * : One or more plugin slugs to check
+     *
+     * [--format=<format>]
+     * : Format to use: ‘table’, ‘json’, ‘csv’, ‘yaml’, ‘ids’, ‘count’ (default: `table`)
+     *
+     * [--silent]
+     * : Only output errors
      *
      * [--force]
      * : Force run even if unchanged
@@ -40,6 +47,9 @@ class Scanner
     {
         $this->isForce = (bool) get_flag_value($flags, 'force', false);
         $this->isVerbose = (bool) get_flag_value($flags, 'verbose', false);
+        $this->isSilent = (bool) get_flag_value($flags, 'silent', false);
+
+        $format = get_flag_value($flags, 'format', 'table');
 
         $headers = [];
         $lastTimeRun = (int) get_transient(self::TRANSIENT_LAST_SCAN_TIME);
@@ -58,6 +68,8 @@ class Scanner
         /** @var array<string,Copyright> copyrights */
         $copyrights = [];
 
+        $errors = [];
+
         try {
             $hasFixableErrors = false;
             foreach ($scanner->next() as $vulnerability => $exception) {
@@ -65,16 +77,26 @@ class Scanner
                     $copyrights[$copyright->slug] = $copyright;
                 }
 
-                if ($vulnerability->isPatched()) {
+                $isPatched = $vulnerability->isPatched();
+                if ($isPatched) {
                     $hasFixableErrors = true;
-
-                    $this->reportError($exception->getMessage(), $vulnerability);
-                } else {
-                    $this->reportWarning('Unpatched vulnarability', $vulnerability);
+                } elseif ($this->isSilent) {
+                    continue;
                 }
+
+                $errors[] = [
+                    'vulnerability' => $vulnerability->getMessage(),
+                    'exception' => $exception->getMessage(),
+                    'has patch' => $isPatched ? 'yes' : '',
+                    'references' => implode("\n", $vulnerability->references),
+                ];
             }
 
-            if ($copyrights) {
+            if ($errors) {
+                format_items($format, $errors, array_keys($errors[0]));
+            }
+
+            if ($copyrights && ! $this->isSilent) {
                 WP_CLI::log('');
                 foreach ($copyrights as $copyright) {
                     WP_CLI::log(WP_CLI::colorize('%y' . $copyright->getNotice() . '%n'));
@@ -96,33 +118,8 @@ class Scanner
      */
     protected function verbose(string $message, ...$args): void
     {
-        if ($this->isVerbose) {
+        if ($this->isVerbose && ! $this->isSilent) {
             WP_CLI::log(sprintf($message, ...$args));
         }
-    }
-
-    protected function reportError(string $message, Record $record): void
-    {
-        $refences = $record->references ? "\n\t" . implode("\n\t", $record->references) : '';
-
-        WP_CLI::error(sprintf(
-            "%s %s%s",
-            $message,
-            $record->getMessage(),
-            $refences
-        ), false);
-    }
-
-
-    protected function reportWarning(string $message, Record $record): void
-    {
-        $refences = $record->references ? "\n\t" . implode("\n\t", $record->references) : '';
-
-        WP_CLI::log(sprintf(
-            '%s %s%s',
-            WP_CLI::colorize('%y' . $message . ':%n'),
-            $record->title,
-            $refences,
-        ));
     }
 }
