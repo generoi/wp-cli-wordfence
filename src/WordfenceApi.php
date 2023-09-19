@@ -44,7 +44,7 @@ class WordfenceApi
     protected function getResponse(): ?array
     {
         $response = wp_remote_get(self::WORDFENCE_SCANNER_ENDPOINT, [
-            'timeout' => 10,
+            'timeout' => 30,
             'headers' => array_merge([
                 'Accept' => 'application/json',
             ], $this->headers),
